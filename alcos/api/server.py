@@ -236,6 +236,44 @@ def create_app() -> FastAPI:
         }
 
     # ============================================================================
+    # EXECUTION ENDPOINTS
+    # ============================================================================
+
+    @app.post("/execute/python")
+    async def execute_python(code: str, variables: Optional[Dict[str, Any]] = None):
+        """Execute Python code."""
+        if not config.settings.enable_code_execution:
+            raise HTTPException(status_code=403, detail="Code execution is disabled")
+
+        try:
+            result = await core_os.execute_python(code, variables)
+            return result
+        except Exception as e:
+            logger.error(f"Python execution failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/execute/shell")
+    async def execute_shell(command: str):
+        """Execute shell command."""
+        if not config.settings.enable_code_execution:
+            raise HTTPException(status_code=403, detail="Code execution is disabled")
+
+        try:
+            result = await core_os.execute_shell(command)
+            return result
+        except Exception as e:
+            logger.error(f"Shell execution failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/execute/status")
+    async def get_execution_status():
+        """Get execution status."""
+        status = await core_os.get_execution_status()
+        return {
+            "executor": status,
+        }
+
+    # ============================================================================
     # MEMORY ENDPOINTS
     # ============================================================================
 
@@ -303,6 +341,42 @@ def create_app() -> FastAPI:
                     await websocket.send_json({
                         "type": "memory_result",
                         "payload": results,
+                    })
+
+                elif data.get("type") == "execute_python":
+                    if not config.settings.enable_code_execution:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "Code execution is disabled",
+                        })
+                    else:
+                        code = data.get("code", "")
+                        variables = data.get("variables", {})
+                        result = await core_os.execute_python(code, variables)
+                        await websocket.send_json({
+                            "type": "execution_result",
+                            "payload": result,
+                        })
+
+                elif data.get("type") == "execute_shell":
+                    if not config.settings.enable_code_execution:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "Code execution is disabled",
+                        })
+                    else:
+                        command = data.get("command", "")
+                        result = await core_os.execute_shell(command)
+                        await websocket.send_json({
+                            "type": "execution_result",
+                            "payload": result,
+                        })
+
+                elif data.get("type") == "execution_status":
+                    status = await core_os.get_execution_status()
+                    await websocket.send_json({
+                        "type": "execution_status_update",
+                        "payload": status,
                     })
 
                 elif data.get("type") == "ping":

@@ -6,9 +6,11 @@ __author__ = "Autonomous Systems Team"
 from .core import AgenticCoreOS
 from .config import get_config
 from .logger import setup_logging
+from .executor import CodeExecutor
 
 __all__ = [
     "AgenticCoreOS",
     "get_config",
     "setup_logging",
+    "CodeExecutor",
 ]

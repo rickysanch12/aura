@@ -10,6 +10,7 @@ from .config import get_config
 from .logger import setup_logging, get_logger
 from .memory import MemoryManager, ChromaVectorStore
 from .models import ModelManager, ModelRouter
+from .executor import CodeExecutor
 from .agents import (
     AgentManager,
     PlannerAgent,
@@ -40,6 +41,12 @@ class AgenticCoreOS:
             ollama_base_url=self.config.settings.ollama_base_url,
         )
         self.model_router = ModelRouter(self.model_manager)
+
+        self.executor = CodeExecutor(
+            timeout=self.config.settings.execution_timeout,
+            max_concurrent=self.config.settings.max_concurrent_executions,
+            enable_docker=self.config.settings.sandbox_isolation == "docker",
+        )
 
         self.agent_manager = AgentManager()
 
@@ -117,6 +124,7 @@ class AgenticCoreOS:
             logger.info("Stopping ALCOS...")
 
             await self.agent_manager.stop_all()
+            await self.executor.cleanup()
             self.memory_store.persist()
 
             self.is_running = False
@@ -223,6 +231,24 @@ class AgenticCoreOS:
     async def get_available_models(self) -> List[Dict[str, Any]]:
         """Get available models."""
         return await self.model_manager.get_available_models()
+
+    async def execute_python(
+        self,
+        code: str,
+        variables: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Execute Python code."""
+        result = await self.executor.execute_python(code, variables)
+        return result.to_dict()
+
+    async def execute_shell(self, command: str) -> Dict[str, Any]:
+        """Execute shell command."""
+        result = await self.executor.execute_shell(command)
+        return result.to_dict()
+
+    async def get_execution_status(self) -> Dict[str, Any]:
+        """Get executor status."""
+        return self.executor.get_execution_status()
 
     async def get_agents(self) -> List[Dict[str, Any]]:
         """Get all agents."""
