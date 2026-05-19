@@ -1,0 +1,200 @@
+#!/bin/bash
+
+# ALCOS Quick Launcher - Universal launcher script for ALCOS
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Print banner
+print_banner() {
+    echo -e "${BLUE}"
+    echo "=================================================================="
+    echo "  ALCOS - Agentic Local Core OS"
+    echo "  Elite Local Autonomous AI System"
+    echo "=================================================================="
+    echo -e "${NC}"
+}
+
+# Check prerequisites
+check_prerequisites() {
+    local issues=0
+
+    echo -e "${YELLOW}Checking prerequisites...${NC}"
+
+    # Check Python
+    if ! command -v python3 &> /dev/null; then
+        echo -e "${RED}✗ Python3 not found${NC}"
+        echo "  Install from: https://www.python.org/downloads/"
+        issues=$((issues + 1))
+    else
+        echo -e "${GREEN}✓ Python3 found$(NC)"
+    fi
+
+    # Check Node.js
+    if ! command -v node &> /dev/null; then
+        echo -e "${RED}✗ Node.js not found${NC}"
+        echo "  Install from: https://nodejs.org"
+        issues=$((issues + 1))
+    else
+        echo -e "${GREEN}✓ Node.js found${NC}"
+    fi
+
+    # Check pip
+    if ! command -v pip3 &> /dev/null; then
+        echo -e "${RED}✗ pip3 not found${NC}"
+        echo "  Install from: https://pip.pypa.io/en/stable/installation/"
+        issues=$((issues + 1))
+    else
+        echo -e "${GREEN}✓ pip3 found${NC}"
+    fi
+
+    if [ $issues -gt 0 ]; then
+        echo ""
+        echo -e "${RED}Please install missing prerequisites and try again.${NC}"
+        exit 1
+    fi
+    echo ""
+}
+
+# Setup environment
+setup_environment() {
+    echo -e "${YELLOW}Setting up environment...${NC}"
+
+    cd "$PROJECT_ROOT"
+
+    # Create logs directory
+    mkdir -p logs
+
+    # Check and create virtual environment
+    if [ ! -d "venv" ]; then
+        echo "Creating virtual environment..."
+        python3 -m venv venv
+    fi
+
+    # Activate virtual environment
+    source venv/bin/activate
+
+    # Install/update Python dependencies
+    if [ -f "setup.py" ]; then
+        echo "Installing Python dependencies..."
+        pip install -e . > /dev/null 2>&1 || {
+            echo -e "${RED}Failed to install Python dependencies${NC}"
+            exit 1
+        }
+    fi
+
+    # Install Node dependencies if needed
+    if [ ! -d "frontend/node_modules" ]; then
+        echo "Installing Node dependencies..."
+        cd frontend
+        npm install > /dev/null 2>&1 || {
+            echo -e "${RED}Failed to install Node dependencies${NC}"
+            exit 1
+        }
+        cd "$PROJECT_ROOT"
+    fi
+
+    echo -e "${GREEN}Environment ready${NC}"
+    echo ""
+}
+
+# Start backend
+start_backend() {
+    echo -e "${YELLOW}Starting backend...${NC}"
+
+    cd "$PROJECT_ROOT"
+    python -m alcos.api.server > logs/backend.log 2>&1 &
+    BACKEND_PID=$!
+
+    # Wait for backend to start
+    sleep 3
+
+    if ! ps -p $BACKEND_PID > /dev/null 2>&1; then
+        echo -e "${RED}✗ Backend failed to start${NC}"
+        echo "Check logs/backend.log for details:"
+        cat logs/backend.log | tail -20
+        exit 1
+    fi
+
+    echo -e "${GREEN}✓ Backend running (PID: $BACKEND_PID)${NC}"
+}
+
+# Start frontend
+start_frontend() {
+    echo -e "${YELLOW}Starting frontend...${NC}"
+
+    cd "$PROJECT_ROOT/frontend"
+    npm run electron-dev &
+    FRONTEND_PID=$!
+
+    echo -e "${GREEN}✓ Frontend starting${NC}"
+    echo ""
+}
+
+# Print status
+print_status() {
+    echo -e "${BLUE}=================================================================="
+    echo "  ALCOS is running!"
+    echo "=================================================================="
+    echo -e "Backend:  ${GREEN}http://localhost:8000${NC}"
+    echo -e "Frontend: ${GREEN}Electron window${NC}"
+    echo ""
+    echo "Processes:"
+    echo "  Backend  PID: $BACKEND_PID"
+    echo "  Frontend PID: $FRONTEND_PID"
+    echo ""
+    echo "Logs:"
+    echo "  Backend:  logs/backend.log"
+    echo ""
+    echo "To stop ALCOS:"
+    echo "  Press Ctrl+C or close the Electron window"
+    echo -e "${BLUE}==================================================================${NC}"
+    echo ""
+}
+
+# Cleanup on exit
+cleanup() {
+    echo ""
+    echo -e "${YELLOW}Shutting down ALCOS...${NC}"
+
+    # Kill backend
+    if [ ! -z "$BACKEND_PID" ] && ps -p $BACKEND_PID > /dev/null 2>&1; then
+        kill $BACKEND_PID 2>/dev/null || true
+    fi
+
+    # Kill frontend
+    if [ ! -z "$FRONTEND_PID" ] && ps -p $FRONTEND_PID > /dev/null 2>&1; then
+        kill $FRONTEND_PID 2>/dev/null || true
+    fi
+
+    echo -e "${GREEN}ALCOS stopped${NC}"
+    exit 0
+}
+
+# Main flow
+main() {
+    print_banner
+    check_prerequisites
+    setup_environment
+    start_backend
+    start_frontend
+    print_status
+
+    # Setup cleanup on exit
+    trap cleanup SIGINT SIGTERM EXIT
+
+    # Wait for processes
+    wait
+}
+
+# Run main
+main "$@"
