@@ -306,6 +306,56 @@ def create_app() -> FastAPI:
         return stats
 
     # ============================================================================
+    # CODE SUBMISSION ENDPOINTS
+    # ============================================================================
+
+    @app.post("/agents/{agent_id}/submit_code")
+    async def submit_code_from_agent(
+        agent_id: str,
+        code: str,
+        language: str = "python",
+        description: str = "",
+    ):
+        """Agent submits code for user review."""
+        submission = await core_os.agent_manager.submit_code(
+            agent_id=agent_id,
+            code=code,
+            language=language,
+            description=description,
+        )
+        if submission:
+            return {"status": "submitted", "submission": submission}
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    @app.get("/code/submissions")
+    async def get_code_submissions():
+        """Get all code submissions from agents."""
+        submissions = await core_os.agent_manager.get_code_submissions()
+        return {"submissions": submissions}
+
+    @app.post("/code/submissions/clear")
+    async def clear_code_submissions():
+        """Clear code submission history."""
+        await core_os.agent_manager.clear_code_submissions()
+        return {"status": "cleared"}
+
+    @app.post("/code/execute/{submission_index}")
+    async def execute_submitted_code(submission_index: int):
+        """Execute code from a submission."""
+        submissions = await core_os.agent_manager.get_code_submissions()
+        if 0 <= submission_index < len(submissions):
+            submission = submissions[submission_index]
+            language = submission.get("language", "python")
+            code = submission.get("code", "")
+
+            if language == "python":
+                result = await core_os.execute_python(code)
+            else:
+                result = await core_os.execute_shell(code)
+            return {"status": "executed", "result": result}
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    # ============================================================================
     # WEBSOCKET ENDPOINT
     # ============================================================================
 

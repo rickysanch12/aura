@@ -1,6 +1,7 @@
 """Agent lifecycle management."""
 
 from typing import Any, Dict, List, Optional
+from datetime import datetime
 import logging
 import asyncio
 
@@ -13,6 +14,7 @@ class AgentManager:
     def __init__(self):
         self.agents: Dict[str, Any] = {}
         self.agent_by_type: Dict[str, List[str]] = {}
+        self.code_submissions: List[Dict[str, Any]] = []
         self.running = False
 
     async def register_agent(self, agent) -> str:
@@ -145,3 +147,36 @@ class AgentManager:
                 return agent.agent_id
 
         return None
+
+    async def submit_code(
+        self,
+        agent_id: str,
+        code: str,
+        language: str = "python",
+        description: str = "",
+    ) -> Optional[Dict[str, Any]]:
+        """Agent submits code for user review."""
+        agent = await self.get_agent(agent_id)
+        if not agent:
+            return None
+
+        submission = {
+            "agent_id": agent_id,
+            "agent_name": agent.name if hasattr(agent, 'name') else 'Unknown',
+            "code": code,
+            "language": language,
+            "description": description,
+            "timestamp": datetime.now().isoformat(),
+        }
+        self.code_submissions.append(submission)
+        logger.info(f"Code submission from {agent.name if hasattr(agent, 'name') else agent_id}: {len(code)} chars of {language}")
+        return submission
+
+    async def get_code_submissions(self) -> List[Dict[str, Any]]:
+        """Get all code submissions from agents."""
+        return self.code_submissions
+
+    async def clear_code_submissions(self) -> None:
+        """Clear code submission history."""
+        self.code_submissions = []
+        logger.info("Cleared code submission history")
