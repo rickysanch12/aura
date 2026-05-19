@@ -35,7 +35,10 @@ class AgenticCoreOS:
         )
         self.memory_manager = MemoryManager(self.memory_store)
 
-        self.model_manager = ModelManager(self.config.settings.models_dir)
+        self.model_manager = ModelManager(
+            models_dir=self.config.settings.models_dir,
+            ollama_base_url=self.config.settings.ollama_base_url,
+        )
         self.model_router = ModelRouter(self.model_manager)
 
         self.agent_manager = AgentManager()

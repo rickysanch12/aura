@@ -32,6 +32,7 @@ class AlcosSettings(BaseSettings):
     model_timeout: int = Field(default=300)
     enable_gpu: bool = Field(default=True)
     cuda_visible_devices: Optional[str] = Field(default=None)
+    ollama_base_url: str = Field(default="http://localhost:11434")
 
     # Memory
     memory_dir: Path = Field(default_factory=lambda: Path.home() / ".alcos" / "memory")

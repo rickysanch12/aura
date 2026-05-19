@@ -46,6 +46,17 @@ const Models: React.FC = () => {
     });
   };
 
+  const handleDownloadModel = (modelId: string) => {
+    setLoadingModelId(modelId);
+    send({
+      type: "task",
+      payload: {
+        action: "download_model",
+        model_id: modelId,
+      },
+    });
+  };
+
   const getModelSizeColor = (size: string): string => {
     const sizeNum = parseInt(size);
     if (sizeNum < 7) return "text-green-400";
@@ -222,7 +233,18 @@ const Models: React.FC = () => {
 
                   {/* Actions */}
                   <div className="flex gap-2 border-t border-white/10 pt-6">
-                    {model.is_loaded ? (
+                    {!model.is_downloaded ? (
+                      <button
+                        onClick={() => handleDownloadModel(model.id)}
+                        disabled={loadingModelId === model.id}
+                        className="flex-1 px-4 py-2 bg-blue-500/20 text-blue-300 hover:bg-blue-500/30 border border-blue-500/30 rounded-lg font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        {loadingModelId === model.id
+                          ? "Downloading..."
+                          : "Download & Load"}
+                      </button>
+                    ) : model.is_loaded ? (
                       <button
                         onClick={() => handleUnloadModel(model.id)}
                         disabled={loadingModelId === model.id}

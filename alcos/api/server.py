@@ -153,6 +153,88 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=400, detail="Failed to unload model")
         return {"status": "unloaded", "model": model_id}
 
+    @app.post("/models/{model_id}/download")
+    async def download_model(model_id: str):
+        """Download a model from Ollama registry."""
+        success = await core_os.model_manager.download_and_load_model(model_id)
+        if not success:
+            raise HTTPException(status_code=400, detail="Failed to download model")
+        return {"status": "downloaded_and_loaded", "model": model_id}
+
+    @app.post("/models/{model_id}/generate")
+    async def generate(
+        model_id: str,
+        prompt: str,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+        max_tokens: int = 256,
+    ):
+        """Generate text using a model."""
+        if not await core_os.model_manager.can_load_model(model_id):
+            raise HTTPException(status_code=400, detail="Insufficient resources for model")
+
+        response = await core_os.model_manager.generate(
+            model_id=model_id,
+            prompt=prompt,
+            temperature=temperature,
+            top_p=top_p,
+            max_tokens=max_tokens,
+        )
+
+        if not response:
+            raise HTTPException(status_code=500, detail="Generation failed")
+
+        return {
+            "model": model_id,
+            "prompt": prompt,
+            "response": response,
+            "parameters": {
+                "temperature": temperature,
+                "top_p": top_p,
+                "max_tokens": max_tokens,
+            },
+        }
+
+    @app.post("/models/{model_id}/chat")
+    async def chat(
+        model_id: str,
+        messages: list,
+        temperature: float = 0.7,
+        top_p: float = 0.9,
+    ):
+        """Chat with a model."""
+        if not await core_os.model_manager.can_load_model(model_id):
+            raise HTTPException(status_code=400, detail="Insufficient resources for model")
+
+        response = await core_os.model_manager.chat(
+            model_id=model_id,
+            messages=messages,
+            temperature=temperature,
+            top_p=top_p,
+        )
+
+        if not response:
+            raise HTTPException(status_code=500, detail="Chat failed")
+
+        return {
+            "model": model_id,
+            "messages": messages,
+            "response": response,
+            "parameters": {
+                "temperature": temperature,
+                "top_p": top_p,
+            },
+        }
+
+    @app.get("/models/status")
+    async def get_models_status():
+        """Get all models status."""
+        models = await core_os.model_manager.get_available_models()
+        return {
+            "models": models,
+            "ollama_health": await core_os.model_manager.get_ollama_health(),
+        }
+
     # ============================================================================
     # MEMORY ENDPOINTS
     # ============================================================================
