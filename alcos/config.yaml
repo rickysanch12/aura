@@ -1,0 +1,138 @@
+# ALCOS Configuration File
+# This file defines system-wide settings for the Agentic Local Core OS
+
+# API Server Configuration
+api:
+  host: 0.0.0.0
+  port: 8000
+  workers: 4
+  reload_on_change: false
+  enable_cors: true
+  cors_origins:
+    - http://localhost:3000
+    - http://localhost:5173
+    - http://127.0.0.1:3000
+    - http://127.0.0.1:5173
+
+# Model Configuration
+models:
+  path: ~/.alcos/models
+  enable_local_models: true
+  enable_cloud_models: false
+  default_model: hermes
+  ollama_base_url: http://localhost:11434
+  models_registry:
+    - name: openclaw
+      type: chat
+      size: 34
+      supports_tools: true
+      supports_vision: false
+      source: ollama
+    - name: hermes
+      type: chat
+      size: 7
+      supports_tools: true
+      supports_vision: false
+      source: ollama
+    - name: blackbox
+      type: code
+      size: 7
+      supports_tools: true
+      supports_vision: true
+      source: ollama
+
+# Agent Configuration
+agents:
+  max_agents: 10
+  max_queue_size: 100
+  timeout: 300
+  memory_limit: 2048
+  agent_types:
+    - planner
+    - coder
+    - debugger
+    - researcher
+    - monitor
+
+# Memory Configuration
+memory:
+  type: chromadb
+  path: ~/.alcos/memory/chromadb
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  dimension: 384
+  compact_interval: 3600
+  cleanup_threshold: 0.8
+  auto_save: true
+  save_interval: 300
+  max_entries: 100000
+
+# GPU Configuration
+gpu:
+  enable_gpu: true
+  device: cuda:0
+  memory_limit: 24
+  torch_home: ~/.alcos/torch
+  compile_models: false
+
+# Code Execution Configuration
+code_execution:
+  enable: true
+  sandbox_type: docker
+  timeout: 30
+  memory_limit: 512
+  max_output_length: 10000
+  allowed_imports:
+    - numpy
+    - pandas
+    - requests
+    - json
+    - math
+
+# Logging Configuration
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: ~/.alcos/logs/alcos.log
+  max_size_mb: 100
+  retention_days: 30
+  console: true
+
+# Security Configuration
+security:
+  enable_auth: false
+  api_key: ""
+  jwt_secret: ""
+  enable_https: false
+  ssl_cert_path: ""
+  ssl_key_path: ""
+
+# Monitoring Configuration
+monitoring:
+  enable: true
+  interval: 60
+  metrics_port: 9090
+  enable_prometheus: false
+  enable_jaeger: false
+
+# Persistence Configuration
+persistence:
+  persist_state: true
+  state_path: ~/.alcos/state
+  backup_enabled: true
+  backup_interval: 86400
+  backup_retention_days: 30
+
+# WebSocket Configuration
+websocket:
+  enable: true
+  ping_interval: 30
+  ping_timeout: 10
+  max_message_size: 1048576
+
+# Development Configuration
+development:
+  debug: false
+  dev_mode: false
+  reload_on_change: true
+  log_queries: false
+  profile: false

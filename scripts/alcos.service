@@ -1,0 +1,17 @@
+[Unit]
+Description=ALCOS - Agentic Local Core OS
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+Environment="PATH=/home/%i/.alcos/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+ExecStart=/home/%i/alcos/venv/bin/python -m alcos.api.server
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=alcos
+
+[Install]
+WantedBy=multi-user.target

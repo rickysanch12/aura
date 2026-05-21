@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Agentic Local Core OS
+Comment=Elite local autonomous AI system
+Exec=/home/user/aura/scripts/alcos-launcher
+Icon=system-run
+Terminal=false
+Categories=Utility;Development;
+Keywords=AI;Agent;Local;LLM;
