@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # ALCOS Backend API Server
+  alcos-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: alcos-backend
+    ports:
+      - "8000:8000"
+      - "9090:9090"
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - VECTOR_DB_PATH=/app/data/chromadb
+      - TORCH_HOME=/app/data/torch
+      - ENABLE_GPU=true
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./data/memory:/app/data/chromadb
+      - ./data/models:/app/data/models
+      - ./data/torch:/app/data/torch
+      - ./logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - alcos-network
+    shm_size: 2gb
+
+  # Vector Database (ChromaDB)
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: alcos-chromadb
+    ports:
+      - "8001:8000"
+    environment:
+      - ANONYMIZED_TELEMETRY=false
+    volumes:
+      - ./data/chromadb:/data
+    restart: unless-stopped
+    networks:
+      - alcos-network
+
+  # Redis Cache (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: alcos-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data
+    restart: unless-stopped
+    networks:
+      - alcos-network
+    command: redis-server --appendonly yes
+
+  # Ollama for Local Models (Optional)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: alcos-ollama
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    volumes:
+      - ./data/ollama:/root/.ollama
+    restart: unless-stopped
+    networks:
+      - alcos-network
+    # Uncomment for GPU support
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+networks:
+  alcos-network:
+    driver: bridge
+
+volumes:
+  chromadb:
+  redis:
+  ollama:
+  models:
+  torch:
